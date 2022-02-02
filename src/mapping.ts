@@ -1,83 +1,106 @@
-import { BigInt } from "@graphprotocol/graph-ts"
 import {
-  Artblocks,
-  Approval,
-  ApprovalForAll,
-  Transfer,
-  Transfer1,
-  Transfer2,
-  Transfer3,
-  Transfer4,
-  Transfer5,
-  Transfer6,
-  Transfer7
-} from "../generated/Artblocks/Artblocks"
-import { ExampleEntity } from "../generated/schema"
+	ERC721Transfer,
+} from '../generated/schema'
 
-export function handleApproval(event: Approval): void {
-  // Entities can be loaded from the store using a string ID; this ID
-  // needs to be unique across all entities of the same type
-  let entity = ExampleEntity.load(event.transaction.from.toHex())
+import {
+	Approval       as ApprovalEvent,
+	ApprovalForAll as ApprovalForAllEvent,
+	Transfer       as TransferEvent,
+} from '../generated/erc721/IERC721'
 
-  // Entities only exist after they have been saved to the store;
-  // `null` checks allow to create entities on demand
-  if (!entity) {
-    entity = new ExampleEntity(event.transaction.from.toHex())
+import {
+	transactions,
+} from './transactions'
 
-    // Entity fields can be set using simple assignments
-    entity.count = BigInt.fromI32(0)
-  }
+import {
+	events,
+} from './events'
 
-  // BigInt and BigDecimal math are supported
-  entity.count = entity.count + BigInt.fromI32(1)
+import {
+	fetchAccount,
+} from './fetch/account'
 
-  // Entity fields can be set based on event parameters
-  entity.owner = event.params.owner
-  entity.approved = event.params.approved
+import {
+	fetchERC721,
+	fetchERC721Token,
+	fetchERC721Operator,
+} from './fetch/erc721'
 
-  // Entities can be written to the store with `.save()`
-  entity.save()
+import { log } from '@graphprotocol/graph-ts'
+import { BigInt } from '@graphprotocol/graph-ts'
+import {
+	Transaction,
+} from '../generated/schema'
 
-  // Note: If a handler doesn't require existing field values, it is faster
-  // _not_ to load the entity from the store. Instead, create it fresh with
-  // `new Entity(...)`, set the fields that should be updated and save the
-  // entity back to the store. Fields that were not set or unset remain
-  // unchanged, allowing for partial updates to be applied.
+export function handleTransfer(event: TransferEvent): void {
+	let contract = fetchERC721(event.address)
+	if (contract != null) {
+		let token = fetchERC721Token(contract, event.params.tokenId)
+		let from  = fetchAccount(event.params.from)
+		let to    = fetchAccount(event.params.to)
 
-  // It is also possible to access smart contracts from mappings. For
-  // example, the contract that has emitted the event can be connected to
-  // with:
-  //
-  // let contract = Contract.bind(event.address)
-  //
-  // The following functions can then be called on this contract to access
-  // state variables and other data:
-  //
-  // - contract.balanceOf(...)
-  // - contract.getApproved(...)
-  // - contract.isApprovedForAll(...)
-  // - contract.name(...)
-  // - contract.ownerOf(...)
-  // - contract.supportsInterface(...)
-  // - contract.symbol(...)
-  // - contract.tokenURI(...)
-  // - contract.tokenMetadata(...)
+		token.owner = to.id
+
+		contract.save()
+		token.save()
+
+		let ev         = new ERC721Transfer(events.id(event))
+		ev.emitter     = contract.id
+    let tx = transactions.log(event)
+		ev.transaction = tx.id
+		ev.timestamp   = event.block.timestamp
+		ev.contract    = contract.id
+		ev.token       = token.id
+		ev.from        = from.id
+		ev.to          = to.id
+		ev.save()
+	}
 }
 
-export function handleApprovalForAll(event: ApprovalForAll): void {}
+export function handleApproval(event: ApprovalEvent): void {
+	let contract = fetchERC721(event.address)
+	if (contract != null) {
+		let token    = fetchERC721Token(contract, event.params.tokenId)
+		let owner    = fetchAccount(event.params.owner)
+		let approved = fetchAccount(event.params.approved)
 
-export function handleTransfer(event: Transfer): void {}
+		token.owner    = owner.id
+		token.approval = approved.id
 
-export function handleTransfer1(event: Transfer1): void {}
+		token.save()
+		owner.save()
+		approved.save()
 
-export function handleTransfer2(event: Transfer2): void {}
+		// let ev = new Approval(events.id(event))
+		// ev.emitter     = contract.id
+		// ev.transaction = transactions.log(event).id
+		// ev.timestamp   = event.block.timestamp
+		// ev.token       = token.id
+		// ev.owner       = owner.id
+		// ev.approved    = approved.id
+		// ev.save()
+	}
+}
 
-export function handleTransfer3(event: Transfer3): void {}
+export function handleApprovalForAll(event: ApprovalForAllEvent): void {
+	let contract = fetchERC721(event.address)
+	if (contract != null) {
+		let owner      = fetchAccount(event.params.owner)
+		let operator   = fetchAccount(event.params.operator)
+		let delegation = fetchERC721Operator(contract, owner, operator)
 
-export function handleTransfer4(event: Transfer4): void {}
+		delegation.approved = event.params.approved
 
-export function handleTransfer5(event: Transfer5): void {}
+		delegation.save()
 
-export function handleTransfer6(event: Transfer6): void {}
-
-export function handleTransfer7(event: Transfer7): void {}
+		// 	let ev = new ApprovalForAll(events.id(event))
+		// 	ev.emitter     = contract.id
+		// 	ev.transaction = transactions.log(event).id
+		// 	ev.timestamp   = event.block.timestamp
+		// 	ev.delegation  = delegation.id
+		// 	ev.owner       = owner.id
+		// 	ev.operator    = operator.id
+		// 	ev.approved    = event.params.approved
+		// 	ev.save()
+	}
+}
