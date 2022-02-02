@@ -1,0 +1,50 @@
+specVersion: 0.0.1
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Artblocks
+    network: mainnet
+    source:
+      address: "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270"
+      abi: Artblocks
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      entities:
+        - Approval
+        - ApprovalForAll
+        - Transfer
+        - Transfer1
+        - Transfer2
+        - Transfer3
+        - Transfer4
+        - Transfer5
+        - Transfer6
+        - Transfer7
+      abis:
+        - name: Artblocks
+          file: ./abis/Artblocks.json
+      eventHandlers:
+        - event: Approval(indexed address,indexed address,indexed uint256)
+          handler: handleApproval
+        - event: ApprovalForAll(indexed address,indexed address,bool)
+          handler: handleApprovalForAll
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+        - event: Transfer(address,address,uint256)
+          handler: handleTransfer1
+        - event: Transfer(indexed address,address,uint256)
+          handler: handleTransfer2
+        - event: Transfer(address,indexed address,uint256)
+          handler: handleTransfer3
+        - event: Transfer(address,address,indexed uint256)
+          handler: handleTransfer4
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer5
+        - event: Transfer(indexed address,address,indexed uint256)
+          handler: handleTransfer6
+        - event: Transfer(address,indexed address,indexed uint256)
+          handler: handleTransfer7
+      file: ./src/mapping.ts
